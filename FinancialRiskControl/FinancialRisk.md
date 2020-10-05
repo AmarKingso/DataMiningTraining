@@ -691,7 +691,7 @@ loss_fig.plot.bar()
 
 
 
-    <matplotlib.axes._subplots.AxesSubplot at 0x2341cab3580>
+    <matplotlib.axes._subplots.AxesSubplot at 0x11a87dbcaf0>
 
 
 
@@ -728,3 +728,511 @@ unique_val
 ### 第一周内容完
 
 ---
+
+### 1.5 查看数据类型
+
+查看特征的数据类型，一般分为数值型和对象型（即非数值型）
+
+
+```python
+num_fea = list(train.select_dtypes(exclude=['object']).columns)
+obj_fea = list(filter(lambda x: x not in num_fea,list(train.columns)))
+```
+
+查看两种类型的特征
+
+
+```python
+num_fea
+```
+
+
+
+
+    ['id',
+     'loanAmnt',
+     'term',
+     'interestRate',
+     'installment',
+     'employmentTitle',
+     'homeOwnership',
+     'annualIncome',
+     'verificationStatus',
+     'isDefault',
+     'purpose',
+     'postCode',
+     'regionCode',
+     'dti',
+     'delinquency_2years',
+     'ficoRangeLow',
+     'ficoRangeHigh',
+     'openAcc',
+     'pubRec',
+     'pubRecBankruptcies',
+     'revolBal',
+     'revolUtil',
+     'totalAcc',
+     'initialListStatus',
+     'applicationType',
+     'title',
+     'policyCode',
+     'n0',
+     'n1',
+     'n2',
+     'n3',
+     'n4',
+     'n5',
+     'n6',
+     'n7',
+     'n8',
+     'n9',
+     'n10',
+     'n11',
+     'n12',
+     'n13',
+     'n14']
+
+
+
+
+```python
+obj_fea
+```
+
+
+
+
+    ['grade', 'subGrade', 'employmentLength', 'issueDate', 'earliesCreditLine']
+
+
+
+### 1.6 数据关系分析
+
+上面得到了特征的数据类型，我们可以通过观察每个特征的属性分布函数来判断条件，这方面内容先留白，留待以后完善
+
+## 2. 数据预处理及变换
+
+### 2.1 内容介绍
+- 数据预处理：
+    - 缺失值填充
+    - 对象型变换为数值型
+    - 异常值处理
+
+### 2.2 数据预处理
+
+导入所需的库
+
+
+```python
+import numpy as np
+import datetime
+```
+
+#### 2.2.1 缺失值填充
+缺失值填充有多种方法，我们可以多做尝试，选取结果最优的填充方法
+
+查看缺失值情况
+
+
+```python
+train.isnull().sum()
+```
+
+
+
+
+    id                        0
+    loanAmnt                  0
+    term                      0
+    interestRate              0
+    installment               0
+    grade                     0
+    subGrade                  0
+    employmentTitle           1
+    employmentLength      46799
+    homeOwnership             0
+    annualIncome              0
+    verificationStatus        0
+    issueDate                 0
+    isDefault                 0
+    purpose                   0
+    postCode                  1
+    regionCode                0
+    dti                     239
+    delinquency_2years        0
+    ficoRangeLow              0
+    ficoRangeHigh             0
+    openAcc                   0
+    pubRec                    0
+    pubRecBankruptcies      405
+    revolBal                  0
+    revolUtil               531
+    totalAcc                  0
+    initialListStatus         0
+    applicationType           0
+    earliesCreditLine         0
+    title                     1
+    policyCode                0
+    n0                    40270
+    n1                    40270
+    n2                    40270
+    n3                    40270
+    n4                    33239
+    n5                    40270
+    n6                    40270
+    n7                    40270
+    n8                    40271
+    n9                    40270
+    n10                   33239
+    n11                   69752
+    n12                   40270
+    n13                   40270
+    n14                   40270
+    dtype: int64
+
+
+
+采用按特征值平均数填充的方法
+
+
+```python
+label = 'isDefault'
+num_fea.remove(label)
+train[num_fea] = train[num_fea].fillna(train[num_fea].median())
+test_a[num_fea] = test_a[num_fea].fillna(train[num_fea].median())
+```
+
+
+```python
+train.isnull().sum()
+```
+
+
+
+
+    id                        0
+    loanAmnt                  0
+    term                      0
+    interestRate              0
+    installment               0
+    grade                     0
+    subGrade                  0
+    employmentTitle           0
+    employmentLength      46799
+    homeOwnership             0
+    annualIncome              0
+    verificationStatus        0
+    issueDate                 0
+    isDefault                 0
+    purpose                   0
+    postCode                  0
+    regionCode                0
+    dti                       0
+    delinquency_2years        0
+    ficoRangeLow              0
+    ficoRangeHigh             0
+    openAcc                   0
+    pubRec                    0
+    pubRecBankruptcies        0
+    revolBal                  0
+    revolUtil                 0
+    totalAcc                  0
+    initialListStatus         0
+    applicationType           0
+    earliesCreditLine         0
+    title                     0
+    policyCode                0
+    n0                        0
+    n1                        0
+    n2                        0
+    n3                        0
+    n4                        0
+    n5                        0
+    n6                        0
+    n7                        0
+    n8                        0
+    n9                        0
+    n10                       0
+    n11                       0
+    n12                       0
+    n13                       0
+    n14                       0
+    dtype: int64
+
+
+
+#### 2.2.2 对象型转变为数值型
+
+根据数据分析阶段我们得到的信息，对象型特征有如下几个
+
+
+```python
+obj_fea
+```
+
+
+
+
+    ['grade', 'subGrade', 'employmentLength', 'issueDate', 'earliesCreditLine']
+
+
+
+根据样本信息可知issueDate与earliesCreditLine都涉及到时间，而其他三个特征可以进行分类
+查看可分类的三个特征的类型数量
+
+
+```python
+tmp_fea = ['grade', 'subGrade', 'employmentLength']
+for i in tmp_fea:
+    print('{}: {}'.format(i, train[i].nunique()))
+```
+
+    grade: 7
+    subGrade: 35
+    employmentLength: 11
+    
+
+**转变grade与subGrade**  
+
+查看grade的类别
+
+
+```python
+train['grade'].value_counts(dropna=False).sort_index()
+```
+
+
+
+
+    A    139661
+    B    233690
+    C    227118
+    D    119453
+    E     55661
+    F     19053
+    G      5364
+    Name: grade, dtype: int64
+
+
+
+查看subGrade的类别
+
+
+```python
+train['subGrade'].value_counts(dropna=False).sort_index()
+```
+
+
+
+
+    A1    25909
+    A2    22124
+    A3    22655
+    A4    30928
+    A5    38045
+    B1    42382
+    B2    44227
+    B3    48600
+    B4    49516
+    B5    48965
+    C1    50763
+    C2    47068
+    C3    44751
+    C4    44272
+    C5    40264
+    D1    30538
+    D2    26528
+    D3    23410
+    D4    21139
+    D5    17838
+    E1    14064
+    E2    12746
+    E3    10925
+    E4     9273
+    E5     8653
+    F1     5925
+    F2     4340
+    F3     3577
+    F4     2859
+    F5     2352
+    G1     1759
+    G2     1231
+    G3      978
+    G4      751
+    G5      645
+    Name: subGrade, dtype: int64
+
+
+
+grade与subGrade的几个类别都是存在大小关系的，所以最好通过映射的方式来转换
+
+
+```python
+alpha = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+sub_dict = {}
+num = 1
+for i in alpha:
+    for j in range(1, 6):
+        subgrade = '{}{}'.format(i, j)
+        sub_dict[subgrade] = num
+        num += 1
+```
+
+
+```python
+
+for data in [train, test_a]:
+    data['grade'] = data['grade'].map({'A':1,'B':2,'C':3,'D':4,'E':5,'F':6,'G':7})
+    # data = pd.get_dummies(data, columns=['subGrade'], drop_first=True)
+    data['subGrade'] = data['subGrade'].map(sub_dict)
+```
+
+**转变employmentLength**  
+
+查看employmentLength类型
+
+
+```python
+train['employmentLength'].value_counts(dropna=False).sort_index()
+```
+
+
+
+
+    1 year        52489
+    10+ years    262753
+    2 years       72358
+    3 years       64152
+    4 years       47985
+    5 years       50102
+    6 years       37254
+    7 years       35407
+    8 years       36192
+    9 years       30272
+    < 1 year      64237
+    NaN           46799
+    Name: employmentLength, dtype: int64
+
+
+
+将年数转化为数字
+
+
+```python
+def yearToNum(s):
+    if pd.isnull(s):
+        return s
+    else:
+        return np.int8(s.split()[0])
+for data in [train, test_a]:
+    data['employmentLength'].replace(to_replace='10+ years', value='10 years', inplace=True)
+    data['employmentLength'].replace('< 1 year', '0 years', inplace=True)
+    data['employmentLength'] = data['employmentLength'].apply(yearToNum)
+
+data['employmentLength'].value_counts(dropna=False).sort_index()
+```
+
+
+
+
+    0.0     15989
+    1.0     13182
+    2.0     18207
+    3.0     16011
+    4.0     11833
+    5.0     12543
+    6.0      9328
+    7.0      8823
+    8.0      8976
+    9.0      7594
+    10.0    65772
+    NaN     11742
+    Name: employmentLength, dtype: int64
+
+
+
+**转变issueDate**  
+
+该类型为时间格式，考虑将其转化为某一时间后的天数
+
+
+```python
+for data in [train, test_a]:
+    data['issueDate'] = pd.to_datetime(data['issueDate'],format='%Y-%m-%d')
+    startdate = datetime.datetime.strptime('2001-01-01', '%Y-%m-%d')
+    data['issueDateDays'] = data['issueDate'].apply(lambda x: x-startdate).dt.days
+```
+
+
+```python
+train['issueDateDays'].sample(5)
+```
+
+
+
+
+    577418    5113
+    259229    6056
+    476754    5783
+    87452     4656
+    34500     6178
+    Name: issueDateDays, dtype: int64
+
+
+
+**转变earliesCreditLine**  
+
+查看其数据类型格式
+
+
+```python
+train['earliesCreditLine'].sample(5)
+```
+
+
+
+
+    249706    Feb-2004
+    169332    Sep-1983
+    716540    Apr-2000
+    525929    Sep-2006
+    195569    Aug-1995
+    Name: earliesCreditLine, dtype: object
+
+
+
+考虑简单处理，只保留其后面的年份
+
+
+```python
+for data in [train, test_a]:
+    data['earliesCreditLine'] = data['earliesCreditLine'].apply(lambda x: int(x[-4:]))
+
+train['earliesCreditLine'].sample(5)
+```
+
+
+
+
+    464707    2008
+    18154     2004
+    581020    1989
+    183231    2001
+    227405    1997
+    Name: earliesCreditLine, dtype: int64
+
+
+
+#### 2.2.3 异常值处理
+
+## 第二周内容完
+
+---
+
+存储处理后的数据集
+
+
+```python
+train.to_csv('clean_train.csv')
+test_a.to_csv('clean_test.csv')
+```
