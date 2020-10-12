@@ -7,7 +7,6 @@
 - 大致了解数据集包含的信息
 - 查看缺失值和唯一值情况
 - 查看数据集中数据类型
-- 分析数据间的关系
 
 ### 1.2 数据集导入
 
@@ -691,7 +690,7 @@ loss_fig.plot.bar()
 
 
 
-    <matplotlib.axes._subplots.AxesSubplot at 0x11a87dbcaf0>
+    <matplotlib.axes._subplots.AxesSubplot at 0x13cceecdaf0>
 
 
 
@@ -805,10 +804,6 @@ obj_fea
     ['grade', 'subGrade', 'employmentLength', 'issueDate', 'earliesCreditLine']
 
 
-
-### 1.6 数据关系分析
-
-上面得到了特征的数据类型，我们可以通过观察每个特征的属性分布函数来判断条件，这方面内容先留白，留待以后完善
 
 ## 2. 数据预处理及变换
 
@@ -1064,13 +1059,35 @@ train['subGrade'].value_counts(dropna=False).sort_index()
 
 
 
-grade与subGrade的几个类别都是存在大小关系的，所以最好通过映射的方式来转换
+观察可以推断，grade和subGrade可能为描述同一种属性的特征，通过代码来验证
+
+
+```python
+train.apply(lambda x: x['grade'] not in x['subGrade'], axis=1).sum()
+```
+
+
+
+
+    0
+
+
+
+可知grade能与subGrade一一对应上，相当于subGrade的前缀，将其删去
+
+
+```python
+for data in [train, test_a]:
+    data.drop(['grade'], axis=1, inplace=True)
+```
+
+可知subGrade的几个类别都是存在大小关系的，所以最好通过映射的方式来转换
 
 
 ```python
 alpha = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
 sub_dict = {}
-num = 1
+num = 0
 for i in alpha:
     for j in range(1, 6):
         subgrade = '{}{}'.format(i, j)
@@ -1082,7 +1099,6 @@ for i in alpha:
 ```python
 
 for data in [train, test_a]:
-    data['grade'] = data['grade'].map({'A':1,'B':2,'C':3,'D':4,'E':5,'F':6,'G':7})
     # data = pd.get_dummies(data, columns=['subGrade'], drop_first=True)
     data['subGrade'] = data['subGrade'].map(sub_dict)
 ```
@@ -1171,11 +1187,11 @@ train['issueDateDays'].sample(5)
 
 
 
-    577418    5113
-    259229    6056
-    476754    5783
-    87452     4656
-    34500     6178
+    136033    4868
+    580931    5722
+    709425    4656
+    260912    5569
+    287661    6178
     Name: issueDateDays, dtype: int64
 
 
@@ -1192,11 +1208,11 @@ train['earliesCreditLine'].sample(5)
 
 
 
-    249706    Feb-2004
-    169332    Sep-1983
-    716540    Apr-2000
-    525929    Sep-2006
-    195569    Aug-1995
+    629127    Dec-2006
+    22450     May-1986
+    457004    Jan-1991
+    222195    May-2007
+    464677    Aug-2000
     Name: earliesCreditLine, dtype: object
 
 
@@ -1214,19 +1230,95 @@ train['earliesCreditLine'].sample(5)
 
 
 
-    464707    2008
-    18154     2004
-    581020    1989
-    183231    2001
-    227405    1997
+    125204    2004
+    416857    2005
+    786651    2004
+    77422     2004
+    663220    2011
     Name: earliesCreditLine, dtype: int64
 
 
 
-#### 2.2.3 异常值处理
-
 ## 第二周内容完
 
+---
+
+#### 2.2.3 异常值处理
+
+该部分的主要思路是，先找出数值型的连续变量，将其分布可视化，观察哪些特征存在明显的异常值，然后对该特征进行分箱并做平滑处理
+
+- 找出数值型的连续变量
+
+
+```python
+num_serial_fea = []
+for fea in num_fea:
+    if train[fea].nunique() > 10:
+        num_serial_fea.append(fea)
+
+num_serial_fea
+```
+
+
+
+
+    ['id',
+     'loanAmnt',
+     'interestRate',
+     'installment',
+     'employmentTitle',
+     'annualIncome',
+     'purpose',
+     'postCode',
+     'regionCode',
+     'dti',
+     'delinquency_2years',
+     'ficoRangeLow',
+     'ficoRangeHigh',
+     'openAcc',
+     'pubRec',
+     'pubRecBankruptcies',
+     'revolBal',
+     'revolUtil',
+     'totalAcc',
+     'title',
+     'n0',
+     'n1',
+     'n2',
+     'n3',
+     'n4',
+     'n5',
+     'n6',
+     'n7',
+     'n8',
+     'n9',
+     'n10',
+     'n13',
+     'n14']
+
+
+
+- 特征分布可视化
+
+
+```python
+import seaborn as sns
+import warnings
+warnings.filterwarnings('ignore')
+```
+
+
+```python
+f = pd.melt(train, value_vars=num_serial_fea)
+g = sns.FacetGrid(f, col="variable",  col_wrap=2, sharex=False, sharey=False)
+g = g.map(sns.distplot, "value")
+```
+
+
+![png](output_84_0.png)
+
+
+## 第三周内容完
 ---
 
 存储处理后的数据集
