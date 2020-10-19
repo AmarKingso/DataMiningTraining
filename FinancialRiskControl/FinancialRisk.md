@@ -690,7 +690,7 @@ loss_fig.plot.bar()
 
 
 
-    <matplotlib.axes._subplots.AxesSubplot at 0x13cceecdaf0>
+    <matplotlib.axes._subplots.AxesSubplot at 0x1a19044eaf0>
 
 
 
@@ -1187,11 +1187,11 @@ train['issueDateDays'].sample(5)
 
 
 
-    136033    4868
-    580931    5722
-    709425    4656
-    260912    5569
-    287661    6178
+    358068    5417
+    360650    5722
+    532090    5203
+    362430    5386
+    416258    5660
     Name: issueDateDays, dtype: int64
 
 
@@ -1208,11 +1208,11 @@ train['earliesCreditLine'].sample(5)
 
 
 
-    629127    Dec-2006
-    22450     May-1986
-    457004    Jan-1991
-    222195    May-2007
-    464677    Aug-2000
+    415999    Oct-1999
+    148089    Nov-1994
+    145440    Sep-2003
+    86260     May-2007
+    59522     Feb-2004
     Name: earliesCreditLine, dtype: object
 
 
@@ -1230,11 +1230,11 @@ train['earliesCreditLine'].sample(5)
 
 
 
-    125204    2004
-    416857    2005
-    786651    2004
-    77422     2004
-    663220    2011
+    571202    2002
+    790460    2009
+    659169    2005
+    681541    2011
+    368887    2003
     Name: earliesCreditLine, dtype: int64
 
 
@@ -1245,9 +1245,24 @@ train['earliesCreditLine'].sample(5)
 
 #### 2.2.3 异常值处理
 
-该部分的主要思路是，先找出数值型的连续变量，将其分布可视化，观察哪些特征存在明显的异常值，然后对该特征进行分箱并做平滑处理
+该部分的主要思路是，采用箱型图分析找出各特征的异常值，然后对特征进行分箱并做平滑处理
 
-- 找出数值型的连续变量
+- 实现箱型图分析
+
+
+```python
+def detect_outliers(data, fea):
+    Q1 = np.percentile(data[fea], 25)
+    Q3 = np.percentile(data[fea], 75)
+    IQR = Q3 - Q1
+    outlier_step = IQR * 1.5
+    lower_threshold = Q1 - outlier_step
+    upper_threshold = Q3 + outlier_step
+    data[fea + '_outliers'] = data[fea].apply(lambda x: 1 if x > upper_threshold or x < lower_threshold else 0)
+    return data
+```
+
+考虑到存在一些非连续数值型特征，会导致箱型图分析出现较多的异常值，所以筛选出连续性数值型特征
 
 
 ```python
@@ -1255,7 +1270,7 @@ num_serial_fea = []
 for fea in num_fea:
     if train[fea].nunique() > 10:
         num_serial_fea.append(fea)
-
+        
 num_serial_fea
 ```
 
@@ -1298,27 +1313,72 @@ num_serial_fea
 
 
 
-- 特征分布可视化
+- 检测异常值并打印信息
 
 
 ```python
-import seaborn as sns
-import warnings
-warnings.filterwarnings('ignore')
+for fea in num_serial_fea:
+    train = detect_outliers(train, fea)
+    fea_outlier = fea + '_outliers'
+    print('{}异常值总数: {}'.format(fea, train[fea_outlier].sum()))
 ```
+
+    id异常值总数: 0
+    loanAmnt异常值总数: 4246
+    interestRate异常值总数: 14803
+    installment异常值总数: 24992
+    employmentTitle异常值总数: 53171
+    annualIncome异常值总数: 39014
+    purpose异常值总数: 2107
+    postCode异常值总数: 2715
+    regionCode异常值总数: 14948
+    dti异常值总数: 3271
+    delinquency_2years异常值总数: 154285
+    ficoRangeLow异常值总数: 27667
+    ficoRangeHigh异常值总数: 27667
+    openAcc异常值总数: 27439
+    pubRec异常值总数: 135235
+    pubRecBankruptcies异常值总数: 99519
+    revolBal异常值总数: 47355
+    revolUtil异常值总数: 47
+    totalAcc异常值总数: 13446
+    title异常值总数: 114381
+    n0异常值总数: 180303
+    n1异常值总数: 15828
+    n2异常值总数: 21457
+    n3异常值总数: 21457
+    n4异常值总数: 33948
+    n5异常值总数: 34893
+    n6异常值总数: 46771
+    n7异常值总数: 32134
+    n8异常值总数: 30213
+    n9异常值总数: 19452
+    n10异常值总数: 26784
+    n13异常值总数: 43599
+    n14异常值总数: 20576
+    
+
+可以看出有很多特征存在大量异常值，这明显是不太合理的。而我们通过了解每一个特征代表的含义，可以将大部分去除。这里考虑对异常值在10000以下的特征进行处理
 
 
 ```python
-f = pd.melt(train, value_vars=num_serial_fea)
-g = sns.FacetGrid(f, col="variable",  col_wrap=2, sharex=False, sharey=False)
-g = g.map(sns.distplot, "value")
+for fea in num_serial_fea:
+    if train[fea + '_outliers'].sum() < 10000:
+        train = train[train[fea+'_outliers'] == 0]
+        train = train.reset_index(drop=True)
+    train.drop([fea+'_outliers'], axis=1, inplace=True)
+        
+len(train)
 ```
 
 
-![png](output_84_0.png)
 
 
-## 第三周内容完
+    787815
+
+
+
+## 第四周内容完
 ---
 
 存储处理后的数据集
