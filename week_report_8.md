@@ -9,3 +9,4 @@
 ![17343118的提交](https://img-blog.csdnimg.cn/20201116170100945.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2Rpb3NtYWlfa2luZ3Nv,size_16,color_FFFFFF,t_70#pic_center)
 
 ## 比赛报告
+https://github.com/AmarKingso/DataMiningTraining/blob/master/CCFCompetition/CCFCompetition.ipynb
